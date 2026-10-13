@@ -1,0 +1,17 @@
+{
+  "name": "dust-strike",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Counter-Strike 1.6 tribute: browser FPS with an authoritative multiplayer server",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "three": "0.160.0",
+    "ws": "8.18.0"
+  }
+}

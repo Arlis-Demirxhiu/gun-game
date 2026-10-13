@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dust Strike</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="hud" class="hidden">
+    <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+    <div id="scope" class="hidden"><div class="h"></div><div class="v"></div></div>
+    <div id="damage"></div>
+    <canvas id="radar" width="200" height="200"></canvas>
+
+    <div id="topbar">
+      <div class="side ct"><span id="alive-ct" class="alive"></span><span id="score-ct" class="score">0</span></div>
+      <div class="mid"><span id="round-label">ROUND <span id="round-num">1</span></span><span id="room-tag"></span></div>
+      <div class="side t"><span id="score-t" class="score">0</span><span id="alive-t" class="alive"></span></div>
+    </div>
+
+    <div id="killfeed"></div>
+    <div id="center-msg"></div>
+    <div id="sub-msg"></div>
+    <div id="aim-name"></div>
+    <div id="hint"></div>
+    <div id="spectate" class="hidden"></div>
+    <div id="progress" class="hidden"><div id="progress-label"></div><div class="track"><div id="progress-bar"></div></div></div>
+    <div id="c4" class="hidden">C4</div>
+
+    <div id="hud-bottom">
+      <div class="hud-num" id="hp">
+        <svg viewBox="0 0 24 24"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" /></svg><span id="hp-val">100</span>
+      </div>
+      <div class="hud-num" id="armor">
+        <svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z" /></svg><span id="armor-val">0</span>
+      </div>
+      <div class="hud-num" id="timer-box">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5v5.4l4 2.3-1 1.7-5-3V7z" /></svg><span id="timer">1:55</span><span id="c4-planted" class="hidden">C4 PLANTED</span>
+      </div>
+      <div class="hud-right">
+        <div id="money" class="hud-num">$<span id="money-val">800</span><span id="money-delta"></span></div>
+        <div id="nades"></div>
+        <div id="weapon-name"></div>
+        <div id="ammo" class="hud-num"><span id="ammo-mag">12</span><span class="bar">|</span><span id="ammo-res">100</span></div>
+      </div>
+    </div>
+
+    <div id="death-report" class="hidden"></div>
+    <div id="flashed"></div>
+    <div id="buymenu" class="hidden"></div>
+    <div id="scoreboard" class="hidden"></div>
+  </div>
+
+  <div id="menu">
+    <div class="menu-inner">
+      <h1>DUST<span>STRIKE</span></h1>
+      <div class="tag">a Counter-Strike 1.6 tribute — bomb defusal, 5 vs 5 with bots or friends</div>
+      <div id="menu-result"></div>
+      <div class="menu-cols">
+      <div class="menu-col">
+      <div class="row">
+        <label>Bots</label>
+        <div class="seg" id="diff-seg">
+          <button data-v="easy">Easy</button>
+          <button data-v="normal" class="on">Normal</button>
+          <button data-v="hard">Hard</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Map</label>
+        <div class="seg" id="map-seg">
+          <button data-v="dust2">Dust II <small>classic</small></button>
+          <button data-v="dust" class="on">Dust <small>large</small></button>
+          <button data-v="outpost">Outpost <small>small</small></button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Graphics</label>
+        <div class="seg" id="gfx-seg">
+          <button data-v="high" class="on">High</button>
+          <button data-v="low">Low (faster)</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Sensitivity <b id="sens-val">1.00</b></label>
+        <input type="range" id="sens" min="0.2" max="3" step="0.05" value="1" />
+      </div>
+      <button id="btn-start" class="big">PLAY VS BOTS</button>
+      <div class="controls">
+        <div><kbd>WASD</kbd> move</div><div><kbd>Mouse</kbd> aim / fire</div>
+        <div><kbd>Space</kbd> jump</div><div><kbd>RMB</kbd> scope / stab</div>
+        <div><kbd>C</kbd> crouch</div><div><kbd>Shift</kbd> walk (silent)</div>
+        <div><kbd>R</kbd> reload</div><div><kbd>1 2 3</kbd> / <kbd>Q</kbd> weapons</div>
+        <div><kbd>4</kbd> grenades (again: next)</div><div><kbd>LMB</kbd>/<kbd>RMB</kbd> throw / lob</div>
+        <div><kbd>B</kbd> buy menu</div><div><kbd>E</kbd> plant / defuse</div>
+        <div><kbd>G</kbd> drop weapon</div><div><kbd>Tab</kbd> scoreboard</div>
+        <div><kbd>M</kbd> change team</div>
+      </div>
+      </div>
+      <div class="menu-col">
+      <div class="mp">
+        <div class="mp-title">ONLINE — play with friends</div>
+        <div class="mp-row">
+          <input id="mp-name" maxlength="16" placeholder="Your name" autocomplete="nickname" />
+          <input id="mp-server" placeholder="server address, e.g. 192.168.1.20:8080" spellcheck="false" />
+        </div>
+        <div class="mp-box">
+          <div class="mp-sub">Create a room</div>
+          <div class="row">
+            <label>Size</label>
+            <div class="seg" id="size-seg">
+              <button data-v="1">1v1</button><button data-v="2">2v2</button><button data-v="3">3v3</button>
+              <button data-v="4">4v4</button><button data-v="5" class="on">5v5</button>
+            </div>
+          </div>
+          <div class="row">
+            <label>Bots <b id="bots-val">9</b> <span class="mp-note" id="bots-note"></span></label>
+            <input type="range" id="mp-bots" min="0" max="9" step="1" value="9" />
+          </div>
+          <button id="btn-create" class="mp-btn">CREATE ROOM</button>
+          <div class="mp-hint">Map and bot difficulty use the settings above. Bots step aside when a player needs their slot.</div>
+        </div>
+        <div class="mp-box">
+          <div class="mp-sub">Join a room</div>
+          <div class="mp-row">
+            <input id="mp-code" maxlength="4" placeholder="CODE" spellcheck="false" autocomplete="off" class="code" />
+            <button id="btn-join" class="mp-btn">JOIN</button>
+            <button id="btn-refresh" class="mp-btn ghost" title="Refresh room list">↻</button>
+          </div>
+          <div id="mp-rooms"></div>
+        </div>
+        <div id="mp-status"></div>
+      </div>
+      </div>
+      </div>
+      <div class="foot">First team to 8 rounds wins. Esc pauses (online play keeps running). You pick your team after joining.</div>
+    </div>
+  </div>
+
+  <div id="teammenu" class="hidden">
+    <div class="tm-panel">
+      <div class="tm-head"><h2>SELECT A TEAM</h2><div class="tm-sub" id="tm-sub"></div></div>
+      <div class="tm-teams">
+        <button class="tm-team T" data-t="T">
+          <span class="tm-key">1</span>
+          <span class="tm-name">TERRORIST FORCES</span>
+          <span class="tm-desc">Plant the C4 at bombsite A or B and protect it until it explodes — or eliminate every Counter-Terrorist.</span>
+          <span class="tm-count" id="tm-count-T"></span>
+        </button>
+        <button class="tm-team CT" data-t="CT">
+          <span class="tm-key">2</span>
+          <span class="tm-name">COUNTER-TERRORIST FORCES</span>
+          <span class="tm-desc">Defend both bombsites. Stop the bomb from being planted, defuse it if it is — or eliminate every Terrorist.</span>
+          <span class="tm-count" id="tm-count-CT"></span>
+        </button>
+      </div>
+      <div class="tm-row">
+        <button class="tm-btn" data-t="auto"><span class="tm-key">5</span> AUTO-SELECT</button>
+        <button class="tm-btn" data-t="cancel"><span class="tm-key">0</span> CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pause" class="hidden">
+    <div class="panel">
+      <h2>PAUSED</h2>
+      <p>Click anywhere to resume</p>
+      <div id="pause-room"></div>
+      <button id="btn-quit">Quit to menu</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/client.js"></script>
+</body>
+</html>
